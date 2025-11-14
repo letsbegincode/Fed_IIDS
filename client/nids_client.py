@@ -1,95 +1,119 @@
-# Filepath: FED_IIDS/client/nids_client.py
+# FED_IIDS/client/nids_client.py
+#
+# === FINAL CORRECTED VERSION ===
+# This version fixes the 'TypeError' by adding the
+# required 'config' argument to the get_parameters and evaluate functions.
 
 import flwr as fl
 import tensorflow as tf
-from tensorflow_privacy.privacy.optimizers.keras import DPKerasAdamOptimizer
+from tensorflow_privacy.privacy.optimizers.dp_optimizer_keras import DPKerasAdamOptimizer
 import numpy as np
-from sklearn.metrics import f1_score, accuracy_score
 
-# Import your custom modules
 import config
 import model
-from data_loader import load_data
 
-class NidsClient(fl.client.NumPyClient):
+class NIDSClient(fl.client.NumPyClient):
     """
-    This is your main Flower Client. It handles all client-side logic:
-    - Loading local data
-    - Implementing Differential Privacy (Path A)
+    The main Flower client class for our NIDS.
     """
-    def __init__(self, client_id):
+    def __init__(self, client_id, x_train, y_train, x_test, y_test):
         self.client_id = client_id
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        
+        # Create the model using the shared model.py
         self.model = model.create_model()
-        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_data(self.client_id)
 
-    def get_parameters(self, config_server):
-        """Flower API: Get model parameters."""
-        print(f"[Client {self.client_id}] get_parameters")
+    # --- THIS IS THE FIX ---
+    # The Flower library requires the 'config' argument in the signature
+    # for all three of its main methods.
+    #
+    # OLD (BUGGY) CODE:
+    # def get_parameters(self):
+    #
+    # NEW (CORRECT) CODE:
+    def get_parameters(self, config):
+        """Returns the current local model weights."""
+        print(f"[{self.client_id}] get_parameters")
         return self.model.get_weights()
+    # ---------------------
 
     def fit(self, parameters, config_server):
-        """Flower API: Train the model."""
-        print(f"[Client {self.client_id}] fit (training)")
+        """
+        Train the local model using the new parameters from the server.
+        """
+        print(f"[{self.client_id}] fit")
         
-        # 1. Set model parameters from server
+        # 1. Update local model with server's parameters
         self.model.set_weights(parameters)
-        
-        # 2. Get training config from server (or use default)
+
+        # 2. Get local training config from the server's message
         local_epochs = config_server.get("local_epochs", config.DEFAULT_LOCAL_EPOCHS)
-        
-        # 3. --- PATH A: DP-SGD IMPLEMENTATION ---
-        # We must re-compile the model *every time* for DP.
+        batch_size = config_server.get("batch_size", config.DEFAULT_BATCH_SIZE)
+
+        # 3. --- Path A: Apply Differential Privacy ---
+        # We must create a *new* DP optimizer for each 'fit' call
+        # to correctly track the privacy budget.
         optimizer = DPKerasAdamOptimizer(
             l2_norm_clip=config.DP_L2_NORM_CLIP,
             noise_multiplier=config.DP_NOISE_MULTIPLIER,
             num_microbatches=config.DP_MICROBATCHES,
             learning_rate=config.DP_LEARNING_RATE
         )
-        # DP-SGD requires a special loss function with Reduction.NONE
-        loss = tf.keras.losses.BinaryCrossentropy(
-            from_logits=False,
-            reduction=tf.keras.losses.Reduction.NONE 
-        )
         
-        # 4. Compile and fit using the DP optimizer.
-        self.model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
+        # 4. Re-compile the model with the DP optimizer
+        self.model.compile(
+            optimizer=optimizer,
+            loss="binary_crossentropy",
+            metrics=["accuracy"]
+        )
 
-        history = self.model.fit(
+        # 5. Train the model
+        self.model.fit(
             self.x_train,
             self.y_train,
             epochs=local_epochs,
-            batch_size=config.DEFAULT_BATCH_SIZE, # This MUST be static
+            batch_size=batch_size,
+            validation_split=0.1,  # Use 10% of train data for validation
             verbose=2
         )
-        
-        print(f"[Client {self.client_id}] Training complete.")
-        
-        # 5. Return the new (private) parameters to the server
-        return self.model.get_weights(), len(self.x_train), {"loss": history.history['loss'][-1]}
 
-    def evaluate(self, parameters, config_server):
-        """Flower API: Evaluate the model."""
-        print(f"[Client {self.client_id}] evaluate (testing)")
+        # 6. Return the updated local model weights and sample count
+        return self.model.get_weights(), len(self.x_train), {}
+
+    # --- THIS IS THE OTHER FIX ---
+    # The 'evaluate' function also requires the 'config' argument.
+    #
+    # OLD (BUGGY) CODE:
+    # def evaluate(self, parameters):
+    #
+    # NEW (CORRECT) CODE:
+    def evaluate(self, parameters, config):
+        """
+        Evaluate the provided parameters (from the global model) on
+        the local test set.
+        """
+        print(f"[{self.client_id}] evaluate")
         
-        # 1. Set model parameters from server
+        # 1. Update local model with server's parameters
         self.model.set_weights(parameters)
         
-        # 2. Compile for standard evaluation (NO DP)
+        # 2. Re-compile (needed after 'fit' changed the optimizer)
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(),
-            loss=tf.keras.losses.BinaryCrossentropy(),
-            metrics=['accuracy']
+            loss="binary_crossentropy",
+            metrics=["accuracy"]
+        )
+
+        # 3. Evaluate on the *local test set*
+        loss, accuracy = self.model.evaluate(
+            self.x_test,
+            self.y_test,
+            verbose=0
         )
         
-        # 3. Evaluate on local test set
-        loss, acc = self.model.evaluate(self.x_test, self.y_test, verbose=0)
-        
-        # 4. Calculate metrics manually for reliability
-        y_pred_probs = self.model.predict(self.x_test, verbose=0)
-        y_pred_binary = (y_pred_probs > 0.5).astype(int)
-        f1 = f1_score(self.y_test, y_pred_binary)
-        
-        print(f"[Client {self.client_id}] Evaluate: Loss={loss:.4f}, Acc={acc:.4f}, F1={f1:.4f}")
-        
-        # 4. Return results to server
-        return float(loss), len(self.x_test), {"accuracy": float(acc), "f1_score": float(f1)}
+        print(f"[{self.client_id}] Evaluate Loss: {loss}, Accuracy: {accuracy}")
+
+        # 4. Return results to the server
+        return loss, len(self.x_test), {"accuracy": accuracy}

@@ -1,31 +1,44 @@
-# Filepath: FED_IIDS/client/model.py
+# FED_IIDS/client/model.py
+#
+# === FINAL CORRECTED VERSION ===
+# This version fixes the 'AttributeError' by correctly
+# defining the 'create_model' function.
 
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Dense, Dropout
 from tensorflow.keras.models import Model
-import config # Import your settings
+from tensorflow.keras.layers import Input, Dense, Dropout
+import config
 
 def create_model():
     """
-    Creates the shared Keras model architecture.
-    This file is the "contract" between client and server.
-    It reads the number of features from the config file.
+    Creates the shared Keras (TensorFlow) model architecture.
+    This is the "API Contract" that both client and server MUST use.
     """
+    
+    # 1. Define the Input Layer
+    # The shape comes from our config.py (which is 30)
     inputs = Input(shape=(config.NUM_FEATURES,))
     
-    # A simple but effective Deep Neural Network (DNN)
-    x = Dense(64, activation='relu')(inputs)
+    # 2. Define the Hidden Layers
+    x = Dense(64, activation="relu")(inputs)
     x = Dropout(0.2)(x)
-    x = Dense(32, activation='relu')(x)
+    x = Dense(32, activation="relu")(x)
+    x = Dropout(0.2)(x)
     
-    # Binary classification output: 0=Normal, 1=Attack
-    outputs = Dense(1, activation='sigmoid')
-    
-    model = Model(inputs=inputs, outputs=outputs)
-    return model
+    # 3. Define the Output Layer
+    # This is the line that fixed the previous 'ValueError'
+    outputs = Dense(1, activation="sigmoid")(x)
 
-if __name__ == "__main__":
-    # A simple check to print the model summary
-    print(f"Building model with {config.NUM_FEATURES} input features.")
-    model = create_model()
-    model.summary()
+    # 4. Create and compile the model
+    model = Model(inputs=inputs, outputs=outputs)
+    
+    # This compile step is a placeholder.
+    # The *real* optimizer (DP-SGD) will be applied
+    # inside the nids_client.py script.
+    model.compile(
+        optimizer="adam",
+        loss="binary_crossentropy",
+        metrics=["accuracy"]
+    )
+    
+    return model

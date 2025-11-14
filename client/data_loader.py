@@ -1,44 +1,75 @@
-# Filepath: FED_IIDS/client/data_loader.py
+# FED_IIDS/client/data_loader.py
+#
+# === FINAL CORRECTED VERSION ===
+# This version fixes the 'unpack' error by correctly
+# returning all four data arrays (x_train, y_train, x_test, y_test)
+# as four separate items, not two tuples.
 
 import numpy as np
 import os
-import config # Import config for DP-SGD settings
+import config
+
+# Define the base data directory
+# This makes the script work regardless of where you run it
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
 def load_data(client_id: str):
     """
-    Loads the preprocessed, partitioned data for a specific client
-    from the .npz files inside the 'data/' folder.
-    """
-    data_dir = "data" # Assumes a 'data' folder in the same directory
-    train_file = os.path.join(data_dir, f"client_{client_id}_train.npz")
-    test_file = os.path.join(data_dir, f"client_{client_id}_test.npz")
+    Loads the pre-partitioned data for a specific client.
     
-    if not os.path.exists(train_file) or not os.path.exists(test_file):
-        print(f"Error: Data files not found for client {client_id}")
-        print(f"Looked for: {train_file} and {test_file}")
-        print("Please make sure the correct .npz files are in the 'data/' folder.")
-        # Return dummy data to avoid a crash during testing
-        dummy_x = np.random.rand(10, config.NUM_FEATURES) 
-        dummy_y = np.random.randint(0, 2, 10)
-        return (dummy_x, dummy_y), (dummy_x, dummy_y)
+    Args:
+        client_id (str): The ID of the client (e.g., 'hospital').
+        
+    Returns:
+        A tuple of four numpy arrays: (x_train, y_train, x_test, y_test)
+    """
+    
+    # 1. Define file paths
+    train_file = os.path.join(BASE_DATA_PATH, f"client_{client_id}_train.npz")
+    test_file = os.path.join(BASE_DATA_PATH, f"client_{client_id}_test.npz")
 
-    with np.load(train_file) as train_data:
-        X_train = train_data['X']
+    # 2. Check if files exist (Raise an error if missing)
+    if not os.path.exists(train_file) or not os.path.exists(test_file):
+        raise FileNotFoundError(
+            f"Data files not found for client {client_id} in "
+            f"{BASE_DATA_PATH}. Please run the Colab preprocessing."
+        )
+
+    # 3. Load the data
+    try:
+        train_data = np.load(train_file, allow_pickle=True)
+        x_train = train_data['X']
         y_train = train_data['y']
         
-    with np.load(test_file) as test_data:
-        X_test = test_data['X']
+        test_data = np.load(test_file, allow_pickle=True)
+        x_test = test_data['X']
         y_test = test_data['y']
+    except Exception as e:
+        raise IOError(f"Error loading .npz files for {client_id}: {e}")
         
-    print(f"[Data] Client {client_id}: Loaded {len(y_train)} train samples and {len(y_test)} test samples.")
-    
-    # --- Data Trimming for DP-SGD ---
-    # DP-SGD requires the batch size to be static and not drop the remainder.
-    n_train = len(y_train)
-    n_train_rounded = (n_train // config.DEFAULT_BATCH_SIZE) * config.DEFAULT_BATCH_SIZE
-    if n_train != n_train_rounded:
-        print(f"[Data] Trimming training data from {n_train} to {n_train_rounded} samples for DP-SGD.")
-        X_train = X_train[:n_train_rounded]
-        y_train = y_train[:n_train_rounded]
+    print(f"[Data] Client {client_id}: Loaded {len(x_train)} train samples and {len(x_test)} test samples.")
 
-    return (X_train, y_train), (X_test, y_test)
+    # 4. CRITICAL: Trim training data for DP-SGD
+    # The DPKerasAdamOptimizer requires that the number of samples
+    # is an exact multiple of the number of microbatches.
+    
+    num_microbatches = config.DP_MICROBATCHES
+    
+    # Calculate how many full batches we can make
+    num_complete_batches = (len(x_train) // num_microbatches) * num_microbatches
+    
+    if num_complete_batches == 0:
+        raise ValueError(
+            f"Not enough training samples ({len(x_train)}) to form even "
+            f"one microbatch ({num_microbatches}). Please check config.py."
+        )
+        
+    if num_complete_batches < len(x_train):
+        print(f"[Data] Trimming training data from {len(x_train)} to {num_complete_batches} samples for DP-SGD.")
+        x_train = x_train[:num_complete_batches]
+        y_train = y_train[:num_complete_batches]
+
+    # --- THIS IS THE FIX ---
+    # This returns FOUR separate items, which matches run_client.py
+    return x_train, y_train, x_test, y_test
+    # ---------------------

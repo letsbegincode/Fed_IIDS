@@ -4,6 +4,7 @@ import numpy as np
 import os
 import sys
 from sklearn.metrics import f1_score
+from typing import Dict
 
 # --- Path Setup ---
 # This is tricky. The server needs to import 'model' and 'config'
@@ -57,16 +58,22 @@ def get_server_evaluation_fn():
         print("Error: Global test set not loaded. Cannot create evaluation function.")
         return None
 
-    def evaluate(server_round: int, parameters: fl.common.Parameters, config):
+    # The type hint for 'parameters' is changed from fl.common.Parameters
+    # to fl.common.NDArrays, which is what FedAvg's evaluate_fn receives.
+    def evaluate(server_round: int, parameters: fl.common.NDArrays, config: Dict[str, fl.common.Scalar]):
         """Standard evaluation function for the server."""
         
         # 1. Create a new instance of the model
+        # We use the same model definition as the clients
         server_model = model.create_model()
         
         # 2. Set the weights to the new global parameters
-        server_model.set_weights(fl.common.parameters_to_weights(parameters))
+        # *** THIS IS THE FIX ***
+        # The 'parameters' variable is *already* a list of NumPy arrays (NDArrays).
+        # We can set the weights directly without conversion.
+        server_model.set_weights(parameters)
         
-        # 3. Compile the model
+        # 3. Compile the model (needed for evaluation)
         server_model.compile(
             optimizer=tf.keras.optimizers.Adam(),
             loss=tf.keras.losses.BinaryCrossentropy(),
@@ -76,7 +83,7 @@ def get_server_evaluation_fn():
         # 4. Evaluate on the global test set
         loss, accuracy = server_model.evaluate(X_test_global, y_test_global, verbose=0)
         
-        # 5. Get F1 Score
+        # 5. Get F1 Score for a more robust metric
         y_pred_probs = server_model.predict(X_test_global, verbose=0)
         y_pred_binary = (y_pred_probs > 0.5).astype(int)
         f1 = f1_score(y_test_global, y_pred_binary)
@@ -84,6 +91,7 @@ def get_server_evaluation_fn():
         print(f"\n--- Global Model Eval (Round {server_round}) ---")
         print(f"Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, F1-Score: {f1:.4f}\n")
         
+        # Return loss and a dictionary of metrics
         return loss, {"accuracy": accuracy, "f1_score": f1}
 
     return evaluate
@@ -97,11 +105,12 @@ def main():
         return # Stop if data is missing
 
     # 2. Define the strategy
+    # We use FedAvg (Federated Averaging)
     strategy = fl.server.strategy.FedAvg(
-        fraction_fit=1.0,           # Train on all available clients (2)
-        fraction_evaluate=1.0,      # Test on all available clients
-        min_fit_clients=2,          # Wait for 2 clients to be ready
-        min_available_clients=2,    # Must have 2 clients online
+        fraction_fit=1.0,           # Train on all available clients (e.g., 2/2)
+        fraction_evaluate=1.0,      # Evaluate on all available clients
+        min_fit_clients=2,          # Wait for 2 clients to be ready for training
+        min_available_clients=2,    # Wait for 2 clients to be online
         evaluate_fn=get_server_evaluation_fn(), # Our global test function
     )
 

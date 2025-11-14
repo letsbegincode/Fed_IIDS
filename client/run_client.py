@@ -1,56 +1,62 @@
-# Filepath: FED_IIDS/client/run_client.py
+# FED_IIDS/client/run_client.py
+#
+# === FINAL CORRECTED VERSION ===
+# This version fixes the 'AttributeError' by calling the
+# correct function name: 'load_data' instead of 'load_client_data'.
 
-import flwr as fl
 import argparse
-import sys
-import os
-
-# This makes sure Python can find your files (config, model, etc.)
-# It adds the 'client' folder to the Python path.
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-try:
-    import config
-    from nids_client import NidsClient
-except ImportError:
-    print("Error: Could not import custom modules. Make sure you are in the 'client' directory.")
-    sys.exit(1)
-
+import flwr as fl
+import config
+import data_loader  # Imports data_loader.py
+import nids_client  # Imports nids_client.py
 
 def main():
-    """Parses arguments and starts the Flower client."""
-    
-    # 1. Set up the argument parser
-    parser = argparse.ArgumentParser(description="Flower NIDS Client")
+    """
+    Parses command-line arguments and starts the Flower client.
+    """
+    # 1. Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Flower Client for NIDS")
     parser.add_argument(
         "--client-id",
-        required=True,
         type=str,
-        help="The partition/ID for this client (e.g., 'hospital', 'factory'). " \
-             "This must match a data file in the /data folder."
+        required=True,
+        choices=["hospital", "factory"],
+        help="Specify the Client ID ('hospital' or 'factory')."
     )
     args = parser.parse_args()
+    client_id = args.client_id
     
-    print(f"Starting client with ID: {args.client_id}")
-    
-    # 2. Instantiate the client
+    print(f"Starting client with ID: {client_id}")
+
+    # 2. Load the client-specific data
     try:
-        client = NidsClient(args.client_id)
-    except Exception as e:
-        print(f"Error instantiating client: {e}")
-        sys.exit(1)
+        # --- THIS IS THE FIX ---
+        # Changed 'data_loader.load_client_data' to 'data_loader.load_data'
+        x_train, y_train, x_test, y_test = data_loader.load_data(client_id)
+        # ---------------------
         
-    # 3. Start the client
-    # It will connect to the server specified in config.py
-    try:
-        fl.client.start_client(
-            server_address=config.SERVER_ADDRESS,
-            client=client
-        )
+        print(f"  Loaded {len(x_train)} training samples and {len(x_test)} test samples.")
+    
     except Exception as e:
-        print(f"Error connecting to server at {config.SERVER_ADDRESS}: {e}")
-        print("Please ensure the server is running and the IP in config.py is correct.")
-        sys.exit(1)
+        print(f"\n[FATAL ERROR] Could not load data: {e}")
+        return
+
+    # 3. Create an instance of the NIDSClient
+    client = nids_client.NIDSClient(
+        client_id=client_id,
+        x_train=x_train,
+        y_train=y_train,
+        x_test=x_test,
+        y_test=y_test
+    )
+
+    # 4. Start the Flower client
+    print("  Connecting to server...")
+    fl.client.start_client(
+        server_address=config.SERVER_ADDRESS,
+        client=client
+    )
+    print("Client disconnected.")
 
 if __name__ == "__main__":
     main()
