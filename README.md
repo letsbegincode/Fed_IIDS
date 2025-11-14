@@ -2,7 +2,6 @@
 
 ### *Privacy-Preserving Federated Learning for Network Intrusion Detection*
 
-GitHub Repository: **[https://github.com/letsbegincode/Fed_IIDS](https://github.com/letsbegincode/Fed_IIDS)**
 
 ---
 
