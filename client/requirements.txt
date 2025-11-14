@@ -1,0 +1,6 @@
+flwr[simulation]
+tensorflow
+tensorflow-privacy
+pandas
+numpy
+scikit-learn
