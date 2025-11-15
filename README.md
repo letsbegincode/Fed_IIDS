@@ -141,6 +141,7 @@ Fed_IIDS/
 ```mermaid
 flowchart TD
 
+<<<<<<< HEAD
     subgraph SERVER["Server (server/)"]
         S["server.py"]
         SC["server_config.py"]
@@ -163,18 +164,51 @@ flowchart TD
         C2C["config.py"]
         C2 --> C2C
         C2 -->|"DP-SGD Training"| C2D
+=======
+    subgraph SERVER["Server Machine (server.py)"]
+        S["Global Server (server.py)"]
+        SC["server_config.py"]
+        GTS["global_test_set.npz"]
+        S --> SC
+        S -->|"Evaluation"| GTS
+    end
+
+    subgraph CLIENT1["Client 1: Hospital"]
+        C1["Hospital Client (run_client.py)"]
+        C1D["hospital_train.npz"]
+        C1C["config.py"]
+        C1 --> C1C
+        C1 -->|"Train with DP-SGD"| C1D
+    end
+
+    subgraph CLIENT2["Client 2: Factory"]
+        C2["Factory Client (run_client.py)"]
+        C2D["factory_train.npz"]
+        C2C["config.py"]
+        C2 --> C2C
+        C2 -->|"Train with DP-SGD"| C2D
+>>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
     end
 
     S -->|"Send Model + Config"| C1
     S -->|"Send Model + Config"| C2
 
+<<<<<<< HEAD
     C1 -->|"Return Update"| S
     C2 -->|"Return Update"| S
+=======
+    C1 -->|"Private Update"| S
+    C2 -->|"Private Update"| S
+>>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
     S -->|"FedAvg Aggregation"| S
 ```
 
+<<<<<<< HEAD
 Full architectural details are available in **TECHNICAL_REPORT.md**.
+=======
+A full breakdown of this architecture is provided in **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**.
+>>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
 
@@ -293,8 +327,13 @@ Full results are in **TECHNICAL_REPORT.md**.
 
 # **10. License**
 
+<<<<<<< HEAD
 This project is licensed under the MIT License.
 See: **[LICENSE](./LICENSE)**
+=======
+This project is licensed under the MIT License.  
+See the full license text here: **[LICENSE](./LICENSE)**.
+>>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
 
@@ -313,6 +352,12 @@ GitHub Repository: https://github.com/letsbegincode/Fed_IIDS
 
 See the full technical paper:
 
+<<<<<<< HEAD
 **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**
+=======
+## **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**
+
+(Architecture, Data Pipeline, Model Details, FL Workflow, Evaluation Methodology, Results)
+>>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
