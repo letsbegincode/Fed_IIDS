@@ -1,6 +1,5 @@
 # **FED_IIDS: Technical Report**
 **Version:** 1.0  
-**Status:** Final
 
 This document is the complete and finalized technical report for the **FED_IIDS** project. It reflects the working implementation, including the decoupled **client**, **server**, and **shared** modules, the finalized data pipeline, and the final model architecture with Differential Privacy (DP-SGD).
 
@@ -257,5 +256,4 @@ FedAvg merges client-specific knowledge into a generalized IDS.
 
 FED_IIDS demonstrates that a high-accuracy intrusion detection system can be collaboratively trained across organizations **without sharing raw data**, protected by Differential Privacy and supported by a realistic non-IID FL environment.
 
-This document serves as the final, verified technical report for the project.
 
