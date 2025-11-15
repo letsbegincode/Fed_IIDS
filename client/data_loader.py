@@ -69,7 +69,7 @@ def load_data(client_id: str):
         x_train = x_train[:num_complete_batches]
         y_train = y_train[:num_complete_batches]
 
-    # --- THIS IS THE FIX ---
+
     # This returns FOUR separate items, which matches run_client.py
     return x_train, y_train, x_test, y_test
     # ---------------------

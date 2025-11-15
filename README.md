@@ -1,300 +1,257 @@
-# **FED_IIDS: A Federated Intrusion Detection System**
+# **FED_IIDS: A Differentially Private Federated Intrusion Detection System**
 
-### *Privacy-Preserving Federated Learning for Network Intrusion Detection*
+### *Privacy-Preserving Network Intrusion Detection Using Federated Deep Learning*
 
-
----
-
-## **Overview**
-
-**FED_IIDS** is a **privacy-preserving Federated Learning (FL) system** for building a **Network Intrusion Detection System (NIDS)** using deep learning.
-It simulates a real-world scenario where multiple organizations—such as a **hospital** and a **factory**—collaboratively train a **global IDS model** **without sharing private network traffic data**.
-
-The system is built using:
-
-* **Flower Federated Learning Framework** (FedAvg)
-* **TensorFlow / Keras Deep Learning Model**
-* **TensorFlow Privacy (DP-SGD)** for Differential Privacy
-* **Custom Non-IID Data Partitions** (core research contribution)
+**Author:** *Abhinav Ranjan*
 
 ---
 
-## **Key Features**
+# **1. Abstract**
 
-### **Federated Learning (FL)**
+FED_IIDS is a federated, privacy-preserving intrusion detection framework designed for distributed environments where organizations cannot share raw network traffic data. The system enables multiple institutions—such as hospitals and manufacturing plants—to collaboratively train a high-performance intrusion detection model while retaining full local data ownership and protecting individual records with Differential Privacy (DP-SGD).
 
-* Built using **Flower** to coordinate distributed training.
-* Implements the **FedAvg** aggregation algorithm.
-* Global model updated after each communication round.
+The project demonstrates the complete lifecycle of a federated NIDS: non-IID data engineering, feature reduction through correlation and LightGBM ranking, deep neural network modeling, differentially private optimization, and secure federated aggregation using the Flower framework. FED_IIDS is designed as a research platform to study federated behavior under realistic conditions, including catastrophic forgetting, data skew challenges, and cross-domain generalization.
 
-### **Privacy-Preserving Training**
-
-* Uses **DP-SGD** (Differentially Private SGD) via `tensorflow-privacy`.
-* Ensures individual client records cannot be reconstructed from model updates.
-
-### **Deep Learning-Based NIDS**
-
-* Modular **Keras DNN** defined in `model.py`.
-* Acts as the **API contract** shared across all clients and the server.
-
-### **Non-IID Data Simulation (Core Research Component)**
-
-Realistic partitioning to simulate domain-specific traffic:
-
-**Client 1 (Hospital)**
-
-* Benign
-* Spoofing
-* Web-Based attacks
-
-**Client 2 (Factory)**
-
-* Benign
-* DoS
-* DDoS
-* Mirai
-
-### **Advanced Data Preprocessing Pipeline**
-
-Includes:
-
-* Aggregation of **1.6M+ network flows**
-* Cleaning, sanitization, and NaN/Inf removal
-* Two-stage feature reduction:
-
-  * **Correlation-based filtering**
-  * **LightGBM tree-based feature selection**
-* Final feature set reduced **from 79 → Top 30** predictive features
+The accompanying **TECHNICAL_REPORT.md** contains detailed architectural, algorithmic, and experimental documentation.
 
 ---
 
-## **Project Architecture**
+# **2. Research Motivation**
 
-### 📌 **Root Folder**
+Modern distributed networks face challenges that make centralized data collection impractical:
 
-#### **server.py**
+### Regulatory Constraints
 
-* Acts as the **central coordinator**
-* Initializes global model
-* Waits for at least **2 clients**
-* Shares global weights, collects updates
-* Runs **FedAvg aggregation**
-* Evaluates on `global_test_set.npz` (never seen by clients)
+Laws such as **GDPR** and **HIPAA** strictly limit the sharing of network logs that may contain sensitive information.
 
----
+### Data Silos
 
-###  **client/**
+Organizations generate valuable intrusion data but cannot share it, resulting in weaker isolated detection systems.
 
-Self-contained FL client module.
+### Non-IID Data
 
-| File             | Description                                                      |
-| ---------------- | ---------------------------------------------------------------- |
-| `run_client.py`  | Entry point, takes `--client-id`                                 |
-| `nids_client.py` | Flower NumPyClient: controls `fit()` and `evaluate()`            |
-| `config.py`      | Central configuration: server IP, DP parameters, training params |
-| `model.py`       | Shared Keras model                                               |
-| `data_loader.py` | Loads client's local non-IID datasets                            |
-| `data/`          | Contains `.npz` files for each client                            |
+Attack patterns differ significantly across industries:
+
+* A hospital primarily sees spoofing and web-based attacks.
+* A factory faces DoS, DDoS, Mirai botnet traffic.
+
+Single-domain IDS models fail to generalize across these environments.
+
+### Privacy Guarantees
+
+Even sharing trained model gradients can leak information due to reconstruction and membership inference attacks.
 
 ---
 
-## **Installation & Setup**
+### **FED_IIDS addresses all of these through:**
 
-### **1. Prerequisites**
-
-* Python **3.9+**
-* Git
-* 3 separate machines (or same machine with multiple terminals):
-
-  * **Server**
-  * **Client 1 (Hospital)**
-  * **Client 2 (Factory)**
+* Federated training without transferring private logs.
+* Cross-organizational learning from heterogeneous attack patterns.
+* Differential privacy for mathematically provable client-level confidentiality.
+* A realistic Non-IID benchmark for studying catastrophic forgetting.
 
 ---
 
-## **2. Installation**
+# **3. Key Contributions**
 
-### Clone the repository
+This project delivers several research-grade contributions:
 
-```bash
+### **3.1 Non-IID Federated IDS Benchmark**
+
+Two highly diverse client environments:
+
+* **Client 1 (Hospital)**: Benign, Spoofing, Web-Based attacks
+* **Client 2 (Factory)**: Benign, DoS, DDoS, Mirai, Recon
+
+### **3.2 Differential Privacy Integration**
+
+Client-side training with:
+
+* Gradient clipping
+* Gaussian noise addition
+* DP-Adam optimizer for strict record-level guarantees
+
+### **3.3 Lightweight IDS Feature Engineering Pipeline**
+
+A reproducible notebook (Fed_IIDS.ipynb) that:
+
+* Cleans and normalizes 1.6M+ flows
+* Applies correlation filtering
+* Performs LightGBM-based feature ranking
+* Reduces the feature space from 74 → 30
+
+### **3.4 End-to-End Federated Training Pipeline**
+
+A complete Flower-based FL system with:
+
+* Dynamic config distribution
+* Secure, noise-protected local training
+* Weighted FedAvg aggregation
+* Global and local evaluation after each round
+
+---
+
+# **4. System Architecture Overview**
+
+FED_IIDS follows a modular, multi-machine client–server design.
+
+## **4.1 Architecture Diagram (Mermaid)**
+
+```mermaid
+flowchart TD
+
+    subgraph SERVER["Server Machine (server.py)"]
+        S[Global Server\n(server.py)]
+        SC[server_config.py]
+        GTS[global_test_set.npz]
+        S --> SC
+        S -->|Evaluation| GTS
+    end
+
+    subgraph CLIENT1["Client 1: Hospital"]
+        C1[run_client.py\n(Hospital)]
+        C1D[Hospital Dataset\n(hospital_train.npz)]
+        C1C[config.py]
+        C1 --> C1C
+        C1 -->|Train with DP-SGD| C1D
+    end
+
+    subgraph CLIENT2["Client 2: Factory"]
+        C2[run_client.py\n(Factory)]
+        C2D[Factory Dataset\n(factory_train.npz)]
+        C2C[config.py]
+        C2 --> C2C
+        C2 -->|Train with DP-SGD| C2D
+    end
+
+    S -->|Send Model + Config| C1
+    S -->|Send Model + Config| C2
+
+    C1 -->|Return Private Update| S
+    C2 -->|Return Private Update| S
+
+    S -->|FedAvg Aggregation| S
+```
+
+A full breakdown of this architecture is provided in **TECHNICAL_REPORT.md**.
+
+---
+
+# **5. Installation and Setup**
+
+Clone the repository:
+
+```
 git clone https://github.com/letsbegincode/Fed_IIDS.git
 cd Fed_IIDS
 ```
 
-### Create a virtual environment
+Create and activate environment:
 
-```bash
-python -m venv venv
 ```
-
-#### Windows:
-
-```bash
+python -m venv venv
 .\venv\Scripts\activate
 ```
 
-#### Mac/Linux:
-
-```bash
-source venv/bin/activate
-```
-
-### Install requirements (all team members)
-
-```bash
-cd client
-pip install -r requirements.txt
-```
-
----
-
-## **3. Data Setup (Most Important Step)**
-
-> **This project does NOT ship with data.**
-> Download the `.npz` files using the Google Drive link provided in `client/data/README.md`.
-
-### Required files:
-
-* `client_hospital_train.npz`
-* `client_hospital_test.npz`
-* `client_factory_train.npz`
-* `client_factory_test.npz`
-* `global_test_set.npz`
-
-Place all files into:
+Install dependencies:
 
 ```
-FED_IIDS/client/data/
+pip install -r client/requirements.txt
 ```
 
-### Now partition them:
+Prepare the dataset:
 
-#### **Server Machine**
-
-Keep only:
-
-```
-global_test_set.npz
-```
-
-#### **Client 1 (Hospital)**
-
-Keep:
+1. Run **Fed_IIDS.ipynb**
+2. Generate the five `.npz` files
+3. Place them in:
 
 ```
-client_hospital_train.npz
-client_hospital_test.npz
-```
-
-#### **Client 2 (Factory)**
-
-Keep:
-
-```
-client_factory_train.npz
-client_factory_test.npz
+Fed_IIDS/client/data/
 ```
 
 ---
 
-# ▶️ **How to Run the Simulation**
+# **6. Running the System**
 
----
+All commands must be executed from the root folder.
 
-## 🎛️ **Step 1: Start the Server**
+### **6.1 Start the Server**
 
-### Find your IP address:
-
-Windows:
-
-```bash
-ipconfig
 ```
-
-Linux/Mac:
-
-```bash
-ifconfig
-```
-
-Example: `192.168.1.10`
-
-### Run the server:
-
-From the root folder:
-
-```bash
 python server.py
 ```
 
-Allow firewall access when prompted.
+### **6.2 Start Client 1 (Hospital)**
 
-The server now waits for 2 clients.
+```
+python -m client.run_client --client-id hospital
+```
+
+### **6.3 Start Client 2 (Factory)**
+
+```
+python -m client.run_client --client-id factory
+```
+
+Training will automatically begin once the minimum required clients connect.
 
 ---
 
-## 🖥️ **Step 2: Start Clients**
+# **7. Research Insights**
 
-### Set the server IP in:
+### Catastrophic Forgetting
 
-`FED_IIDS/client/config.py`
+Training on only one non-IID client (e.g., hospital) causes severe forgetting. Accuracy collapses when tested on unseen attack types such as Mirai.
 
-```python
-SERVER_ADDRESS = "192.168.1.10:8080"
-```
+### Federated Generalization
 
-### Run Client 1 (Hospital)
+Training with both heterogeneous clients resolves this. FedAvg successfully merges specialized domain expertise into a generalized global IDS.
 
-```bash
-python run_client.py --client-id hospital
-```
+### Differential Privacy Behavior
 
-### Run Client 2 (Factory)
+DP-SGD imposes:
 
-```bash
-python run_client.py --client-id factory
-```
+* Computational overhead
+* Accuracy reduction at higher noise levels
+* Strict constraints on batch sizes and validation parameters
 
-Once both connect, training begins automatically.
+The DP-related Keras bug was fixed by replacing `validation_split` with `validation_data`.
 
-Monitor global metrics (accuracy, F1-score) in the server terminal.
+Full experimental analysis is in **TECHNICAL_REPORT.md**.
 
 ---
 
-# 📊 **Output**
+# **8. License**
 
-After each federated round:
-
-* Server displays global model performance on unseen dataset
-* Clients display local training loss and accuracy
-* FedAvg aggregated model improves over rounds
+This project is licensed under the MIT License.
+See the `LICENSE` file for details.
 
 ---
 
-# 📘 **Folder Structure**
+# **9. Citation**
 
-```
-Fed_IIDS/
-│
-├── server.py
-├── client/
-│   ├── run_client.py
-│   ├── nids_client.py
-│   ├── config.py
-│   ├── model.py
-│   ├── data_loader.py
-│   └── data/
-│       ├── client_hospital_train.npz
-│       ├── client_hospital_test.npz
-│       ├── client_factory_train.npz
-│       ├── client_factory_test.npz
-│       └── global_test_set.npz
-└── Fed_IIDS.ipynb
+If you use FED_IIDS in your research, please cite:
+
+```bibtex
+@software{ranjan_fed_iids_2025,
+  author = {Abhinav Ranjan},
+  title = {FED\_IIDS: A Differentially Private Federated Intrusion Detection System},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/letsbegincode/Fed_IIDS}}
+}
 ```
 
 ---
 
-# 🧑‍💻 **Contributors**
+# **10. Additional Documentation**
 
+The following document contains complete, in-depth details:
+
+### **TECHNICAL_REPORT.md**
+
+(Architecture, Data Pipeline, Model Details, FL Workflow, Evaluation Methodology, Results)
 
 ---
+

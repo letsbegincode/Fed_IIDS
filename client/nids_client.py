@@ -1,19 +1,51 @@
-# FED_IIDS/client/nids_client.py
-#
-# === FINAL CORRECTED VERSION ===
-# This version fixes the 'TypeError' by adding the
-# required 'config' argument to the get_parameters and evaluate functions.
-#
-# *** THIS VERSION ALSO FIXES THE TENSORFLOW-PRIVACY VALUEERROR ***
-#
-
 import flwr as fl
 import tensorflow as tf
 from tensorflow_privacy.privacy.optimizers.dp_optimizer_keras import DPKerasAdamOptimizer
 import numpy as np
 
-import config
-import model
+from . import config
+from . import model
+
+# --- UPDATED: Professional Minimal Logger ---
+class MinimalProgressCallback(tf.keras.callbacks.Callback):
+    """
+    A custom, minimal Keras callback for clean federated logs.
+    Shows in-place batch progress and a summary at the end of each epoch.
+    """
+    def __init__(self, client_id, epochs):
+        super().__init__()
+        self.client_id = client_id
+        self.epochs = epochs
+        self.steps = 0 # Total batches in this epoch
+        self.current_epoch = 0 # Current epoch number
+
+    def on_train_begin(self, logs=None):
+        # Get the total number of batches
+        self.steps = self.params.get('steps', 0)
+        print(f"  [{self.client_id}] Starting local training ({self.steps} batches per epoch)...")
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.current_epoch = epoch + 1
+        print(f"  [{self.client_id}] Epoch {self.current_epoch}/{self.epochs}")
+
+    def on_batch_end(self, batch, logs=None):
+        batch_num = batch + 1
+        loss = logs.get('loss', 0.0)
+        # Use carriage return \r to update the line in-place
+        # This shows "live" progress for the current epoch
+        print(f"\r    > Batch {batch_num}/{self.steps} - loss: {loss:.4f}", end='', flush=True)
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Print a newline to move off the \r line from on_batch_end
+        print() 
+        logs = logs or {}
+        # Print the final validation stats for the epoch
+        print(f"    > Epoch complete. -> val_loss: {logs.get('val_loss'):.4f} - val_acc: {logs.get('val_accuracy'):.4f}")
+
+    def on_train_end(self, logs=None):
+        print(f"  [{self.client_id}] Local training complete.")
+# --- End of Updated Callback ---
+
 
 class NIDSClient(fl.client.NumPyClient):
     """
@@ -26,8 +58,7 @@ class NIDSClient(fl.client.NumPyClient):
         self.x_test = x_test
         self.y_test = y_test
         
-        # Create the model using the shared model.py
-        self.model = model.create_model()
+        self.model = model.create_model() 
 
     def get_parameters(self, config):
         """Returns the current local model weights."""
@@ -40,36 +71,19 @@ class NIDSClient(fl.client.NumPyClient):
         """
         print(f"[{self.client_id}] fit")
         
-        # 1. Update local model with server's parameters
         self.model.set_weights(parameters)
 
-        # 2. Get local training config from the server's message
         local_epochs = config_server.get("local_epochs", config.DEFAULT_LOCAL_EPOCHS)
         
-        # *** THIS IS THE FIX ***
-        # For DP-SGD, the batch_size passed to model.fit() *must* be
-        # equal to the num_microbatches passed to the optimizer.
-        # We ignore the server-sent batch_size (which was 128) and
-        # force it to match the DP requirement (which is 256).
         dp_batch_size = config.DP_MICROBATCHES
         
-        # 3. --- Path A: Apply Differential Privacy ---
-        # We must create a *new* DP optimizer for each 'fit' call
-        # to correctly track the privacy budget.
         optimizer = DPKerasAdamOptimizer(
             l2_norm_clip=config.DP_L2_NORM_CLIP,
             noise_multiplier=config.DP_NOISE_MULTIPLIER,
-            num_microbatches=dp_batch_size, # Use our new variable
+            num_microbatches=dp_batch_size,
             learning_rate=config.DP_LEARNING_RATE
         )
         
-        # 4. Re-compile the model with the DP optimizer
-        #
-        # *** THIS IS THE FIX for the ValueError ***
-        # The DPKerasAdamOptimizer requires the loss to be a vector
-        # (one loss per sample), not a single averaged number.
-        # We achieve this by setting 'reduction=tf.keras.losses.Reduction.NONE'.
-        #
         self.model.compile(
             optimizer=optimizer,
             loss=tf.keras.losses.BinaryCrossentropy(
@@ -78,17 +92,24 @@ class NIDSClient(fl.client.NumPyClient):
             metrics=["accuracy"]
         )
 
-        # 5. Train the model
+        # 1. Create an instance of our new minimal callback
+        progress_callback = MinimalProgressCallback(
+            client_id=self.client_id, 
+            epochs=local_epochs
+        )
+
+        # 2. Train the model
         self.model.fit(
             self.x_train,
             self.y_train,
             epochs=local_epochs,
-            batch_size=dp_batch_size, # <-- Use dp_batch_size here
-            validation_split=0.1,  # Use 10% of train data for validation
-            verbose=2
+            batch_size=dp_batch_size, 
+            validation_data=(self.x_test, self.y_test),
+            # 3. Set verbose=0 (silent) and pass our custom callback
+            verbose=0,
+            callbacks=[progress_callback] 
         )
 
-        # 6. Return the updated local model weights and sample count
         return self.model.get_weights(), len(self.x_train), {}
 
     def evaluate(self, parameters, config):
@@ -98,25 +119,20 @@ class NIDSClient(fl.client.NumPyClient):
         """
         print(f"[{self.client_id}] evaluate")
         
-        # 1. Update local model with server's parameters
         self.model.set_weights(parameters)
         
-        # 2. Re-compile (needed after 'fit' changed the optimizer)
-        # Here, we use the *standard* (averaged) loss because
-        # we are not using the DP optimizer for evaluation.
         self.model.compile(
             loss="binary_crossentropy",
             metrics=["accuracy"]
         )
 
-        # 3. Evaluate on the *local test set*
         loss, accuracy = self.model.evaluate(
             self.x_test,
             self.y_test,
             verbose=0
         )
         
-        print(f"[{self.client_id}] Evaluate Loss: {loss}, Accuracy: {accuracy}")
+        # Added .4f formatting for a cleaner log
+        print(f"[{self.client_id}] Evaluate Loss: {loss:.4f}, Accuracy: {accuracy:.4f}")
 
-        # 4. Return results to the server
         return loss, len(self.x_test), {"accuracy": accuracy}
