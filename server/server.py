@@ -2,7 +2,8 @@
 NIDS Federated Learning Server
 
 This server orchestrates the federated learning process.
-It imports all its settings from 'server_config.py'.
+It imports all its settings from 'server_config.py' and 'shared/'.
+IT IS COMPLETELY INDEPENDENT OF THE /client FOLDER.
 """
 
 # --- 1. Silence TensorFlow Warnings ---
@@ -12,7 +13,7 @@ import tensorflow as tf
 tf.get_logger().setLevel('ERROR')
 import warnings
 warnings.filterwarnings("ignore", ".*The name tf.losses.sparse_softmax_cross_entropy is deprecated.*")
-warnings.filterwarnings("ignore", ".*The name tf.executing_eagerly_outside_functions is deprecated.*")
+warnings.filterwarnings("ignore", ".*The name tf.executing_e_agerly_outside_functions is deprecated.*")
 warnings.filterwarnings("ignore", ".*The name tf.ragged.RaggedTensorValue is deprecated.*")
 warnings.filterwarnings("ignore", ".*The name tf.engine.base_layer_utils is deprecated.*")
 # --- End Warning Silence ---
@@ -23,27 +24,39 @@ import sys
 from sklearn.metrics import f1_score
 from typing import Dict, List, Tuple
 
+# --- Path Modification to Import 'shared' ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+
+
+# Add the root directory to the Python path to allow 'shared' import
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+# --- End Path Modification ---
+
 # --- 2. Import Our Configurations ---
-import server_config as sc  # Import the new config file
-import client.model as model
-import client.config as client_config # We need this to get NUM_FEATURES for the model
+import server_config as sc      # From local ./server/ folder
+from shared import model        # From ../shared/ folder
+from shared import model_config # From ../shared/ folder
 
 # --- 3. Global Test Set Loading ---
 X_test_global = None
 y_test_global = None
 
 def load_global_test_set():
-    """Loads the global test set from the client/data/ folder."""
+    """Loads the global test set from this server's internal data/ folder."""
     global X_test_global, y_test_global
     
     print("  > Loading global test set...", end="", flush=True)
-    test_file = os.path.join("client", "data", "global_test_set.npz")
+    # --- [NEW] Path is now local to the server ---
+    test_file = os.path.join(SCRIPT_DIR, "data", "global_test_set.npz")
     
     if not os.path.exists(test_file):
         print(" FAILED")
         print("-----------------------------------------------------------------")
         print(f"FATAL: 'global_test_set.npz' not found at {test_file}")
         print("The server needs this file to perform unbiased evaluation.")
+        print("Please move 'global_test_set.npz' to 'Fed_IIDS/server/data/'")
         print("-----------------------------------------------------------------")
         return False
     
@@ -66,11 +79,9 @@ def get_server_evaluation_fn():
     def evaluate(server_round: int, parameters: fl.common.NDArrays, config: Dict[str, fl.common.Scalar]):
         """Standard evaluation function for the server."""
         
-        # We must use the *client's* config to get the correct model shape
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Re-suppress for this thread
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         tf.get_logger().setLevel('ERROR')
         
-        # This will use client_config.NUM_FEATURES = 30
         server_model = model.create_model() 
         server_model.set_weights(parameters)
         
@@ -95,8 +106,6 @@ def get_server_evaluation_fn():
         
         return loss, {"accuracy": accuracy, "f1_score": f1}
 
-    # *** THIS IS THE FIX ***
-    # It now correctly returns the 'evaluate' function defined above.
     return evaluate
 
 # --- 5. Client Configuration Function ---
@@ -116,7 +125,6 @@ def fit_config(server_round: int) -> Dict[str, fl.common.Scalar]:
 def aggregate_evaluate_metrics(metrics: List[Tuple[int, fl.common.Metrics]]) -> fl.common.Metrics:
     """
     Logs and aggregates the *client-side* evaluation metrics.
-    This is called *after* clients run their local 'evaluate' method.
     """
     if not metrics:
         return {}
@@ -127,7 +135,6 @@ def aggregate_evaluate_metrics(metrics: List[Tuple[int, fl.common.Metrics]]) -> 
         [num_examples * m["accuracy"] for num_examples, m in metrics]
     ) / total_samples
     
-    # This is the fix for the NameError
     print(f"--- [Client-Side Evaluate Results] ---")
     print(f"Received local evaluations from {len(metrics)} clients.")
     print(f"  Weighted Avg. *Client-Side* Accuracy: {weighted_avg_acc:.4f}")
@@ -147,12 +154,12 @@ def main():
 
     print("  > Configuring FedAvg strategy...")
     strategy = fl.server.strategy.FedAvg(
-        fraction_fit=1.0,           # Train on 100% of connected clients
-        fraction_evaluate=1.0,      # Evaluate on 100% of connected clients
+        fraction_fit=1.0,           
+        fraction_evaluate=1.0,      
         
-        min_fit_clients=sc.MIN_CLIENTS,        # From server_config.py
-        min_evaluate_clients=sc.MIN_CLIENTS,   # From server_config.py
-        min_available_clients=sc.MIN_CLIENTS,  # From server_config.py
+        min_fit_clients=sc.MIN_CLIENTS,        
+        min_evaluate_clients=sc.MIN_CLIENTS,   
+        min_available_clients=sc.MIN_CLIENTS,  
         
         evaluate_fn=get_server_evaluation_fn(), 
         on_fit_config_fn=fit_config,            

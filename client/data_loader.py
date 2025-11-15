@@ -1,16 +1,8 @@
-# FED_IIDS/client/data_loader.py
-#
-# === FINAL CORRECTED VERSION ===
-# This version fixes the 'unpack' error by correctly
-# returning all four data arrays (x_train, y_train, x_test, y_test)
-# as four separate items, not two tuples.
-
 import numpy as np
 import os
 import config
 
-# Define the base data directory
-# This makes the script work regardless of where you run it
+# Base path where client data files are stored
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
 def load_data(client_id: str):

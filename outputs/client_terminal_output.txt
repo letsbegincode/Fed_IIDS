@@ -1,4 +1,8 @@
 (venv) PS E:\Fed_IIDS\client> python run_client.py --client-id hospital
+WARNING:tensorflow:From E:\Fed_IIDS\venv\Lib\site-packages\keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+E:\Fed_IIDS\venv\Lib\site-packages\tensorflow_probability\python\__init__.py:57: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  if (distutils.version.LooseVersion(tf.__version__) <
 
 =================================================================
            STARTING CLIENT: HOSPITAL
@@ -6,48 +10,68 @@
   > Loading data...[Data] Client hospital: Loaded 393201 train samples and 98301 test samples.
 [Data] Trimming training data from 393201 to 392960 samples for DP-SGD.
  DONE (392960 train, 98301 test samples).
+
+E:\Fed_IIDS\venv\Lib\site-packages\tensorflow_probability\python\__init__.py:57: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  if (distutils.version.LooseVersion(tf.__version__) <
+
+=================================================================
+           STARTING CLIENT: HOSPITAL
+=================================================================
+  > Loading data...[Data] Client hospital: Loaded 393201 train samples and 98301 test samples.
+[Data] Trimming training data from 393201 to 392960 samples for DP-SGD.
+ DONE (392960 train, 98301 test samples).
+
+=================================================================
+           STARTING CLIENT: HOSPITAL
+=================================================================
+  > Loading data...[Data] Client hospital: Loaded 393201 train samples and 98301 test samples.
+[Data] Trimming training data from 393201 to 392960 samples for DP-SGD.
+ DONE (392960 train, 98301 test samples).
+  > Loading data...[Data] Client hospital: Loaded 393201 train samples and 98301 test samples.
+[Data] Trimming training data from 393201 to 392960 samples for DP-SGD.
+ DONE (392960 train, 98301 test samples).
   > Connecting to server at 127.0.0.1:8080...
-INFO :      
-INFO :      Received: get_parameters message 6dfc78c2-983f-4758-9053-a7ddf25e6a87
+INFO :
+INFO :      Received: get_parameters message 0c4e9d1f-4b8b-44d8-ae28-1170148a3f9f
 [hospital] get_parameters
 INFO :      Sent reply
-INFO :      
-INFO :      Received: train message d5502484-7610-47cb-b07d-70a2f43d8d26
-[hospital] fit
-  [hospital] Starting local training (1535 batches per epoch)...
-  [hospital] Epoch 1/2
-    > Batch 1535/1535 - loss: 0.7377
-    > Epoch complete. -> val_loss: 0.7474 - val_acc: 0.7404
-  [hospital] Epoch 2/2
-    > Batch 1535/1535 - loss: 0.7714
-    > Epoch complete. -> val_loss: 0.7508 - val_acc: 0.7428
-  [hospital] Local training complete.
-INFO :      Sent reply
-INFO :      
-INFO :      Received: evaluate message 751735dd-b419-42d7-99e0-d4fc47a66b68
-[hospital] evaluate
-[hospital] Evaluate Loss: 0.7508, Accuracy: 0.7428
-INFO :      Sent reply
 INFO :
-INFO :      Received: train message 839eeb6e-5b81-4e86-8bee-46e5f7e4e49e
+INFO :      Received: train message 700b0f78-19b4-433e-a77e-9f7898bc8e1a
 [hospital] fit
   [hospital] Starting local training (1535 batches per epoch)...
   [hospital] Epoch 1/2
-    > Batch 1535/1535 - loss: 0.7872
-    > Epoch complete. -> val_loss: 0.7818 - val_acc: 0.7642
+    > Batch 1535/1535 - loss: 0.7302
+    > Epoch complete. -> val_loss: 0.7451 - val_acc: 0.7403
   [hospital] Epoch 2/2
-    > Batch 1535/1535 - loss: 0.7759
-    > Epoch complete. -> val_loss: 0.7433 - val_acc: 0.7694
+    > Batch 1535/1535 - loss: 0.7629
+    > Epoch complete. -> val_loss: 0.7724 - val_acc: 0.7423
   [hospital] Local training complete.
 INFO :      Sent reply
 INFO :      
-INFO :      Received: evaluate message 1f1b40f8-80ab-4611-b6ce-cf033f33c56a
+INFO :      Received: evaluate message 1b748052-8580-4472-ba02-d6a69e942b13
 [hospital] evaluate
-[hospital] Evaluate Loss: 0.7433, Accuracy: 0.7694
+[hospital] Evaluate Loss: 0.7724, Accuracy: 0.7423
 INFO :      Sent reply
 INFO :      
-INFO :      Received: reconnect message 174f0c61-be83-40f9-8131-41c4b9b1ef41
+INFO :      Received: train message 9f1072de-ef68-4d14-917f-4e9c4c3493cb
+[hospital] fit
+  [hospital] Starting local training (1535 batches per epoch)...
+  [hospital] Epoch 1/2
+    > Batch 1535/1535 - loss: 0.7824
+    > Epoch complete. -> val_loss: 0.7811 - val_acc: 0.7644
+  [hospital] Epoch 2/2
+    > Batch 1535/1535 - loss: 0.7743
+    > Epoch complete. -> val_loss: 0.7429 - val_acc: 0.7691
+  [hospital] Local training complete.
+INFO :      Sent reply
+INFO :      
+INFO :      Received: evaluate message 5fffb0bc-f787-4947-b433-d8bc573dc1e0
+[hospital] evaluate
+[hospital] Evaluate Loss: 0.7429, Accuracy: 0.7691
+INFO :      Sent reply
+INFO :      
+INFO :      Received: reconnect message 54a1dde1-80e3-460f-a61b-8f83b3d3b2b0
 INFO :      Disconnect and shut down
 
 [hospital] Client disconnected.
-=========================================================
+=================================================================

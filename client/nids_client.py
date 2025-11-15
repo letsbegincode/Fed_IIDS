@@ -4,7 +4,7 @@ from tensorflow_privacy.privacy.optimizers.dp_optimizer_keras import DPKerasAdam
 import numpy as np
 
 from . import config
-from . import model
+from shared import model
 
 # --- UPDATED: Professional Minimal Logger ---
 class MinimalProgressCallback(tf.keras.callbacks.Callback):

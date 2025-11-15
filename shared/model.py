@@ -1,14 +1,8 @@
-# FED_IIDS/client/model.py
-#
-# === FINAL CORRECTED VERSION ===
-# This version fixes the 'AttributeError' by correctly
-# defining the 'create_model' function.
-
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout
 
-from . import config
+from shared import model_config
 
 def create_model():
     """
@@ -17,8 +11,7 @@ def create_model():
     """
     
     # 1. Define the Input Layer
-    # The shape comes from our config.py (which is 30)
-    inputs = Input(shape=(config.NUM_FEATURES,))
+    inputs = Input(shape=(model_config.NUM_FEATURES,))
     
     # 2. Define the Hidden Layers
     x = Dense(64, activation="relu")(inputs)
@@ -27,7 +20,6 @@ def create_model():
     x = Dropout(0.2)(x)
     
     # 3. Define the Output Layer
-    # This is the line that fixed the previous 'ValueError'
     outputs = Dense(1, activation="sigmoid")(x)
 
     # 4. Create and compile the model
@@ -35,7 +27,6 @@ def create_model():
     
     # This compile step is a placeholder.
     # The *real* optimizer (DP-SGD) will be applied
-    # inside the nids_client.py script.
     model.compile(
         optimizer="adam",
         loss="binary_crossentropy",

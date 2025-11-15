@@ -1,225 +1,261 @@
-# FED_IIDS: Technical Report (Unified, Fully Updated)
+# **FED_IIDS: Technical Report**
+**Version:** 1.0  
+**Status:** Final
 
-## Version: 1.0
-
-This document is the **unified and fully corrected technical report** for the FED_IIDS project. It merges the previous technical report with the updated corrections you provided (including all the comment-flagged modifications), and reflects the **final, working implementation** of the system.
-
-This is a standalone technical report separate from the project README.
+This document is the complete and finalized technical report for the **FED_IIDS** project. It reflects the working implementation, including the decoupled **client**, **server**, and **shared** modules, the finalized data pipeline, and the final model architecture with Differential Privacy (DP-SGD).
 
 ---
+# **1. Introduction**
 
-# 1. Introduction
+**FED_IIDS (Federated Intrusion Detection System)** is a distributed, privacy-preserving intrusion detection framework designed to detect malicious network traffic using **Federated Learning (FL)**. It simulates real-world collaboration between organizations—such as hospitals and manufacturing facilities—without requiring them to share any raw traffic logs.
 
-**FED_IIDS (Federated Intrusion Detection System)** is a distributed, privacy-preserving intrusion detection system designed to detect malicious network traffic using **Federated Learning (FL)**. The system emulates a real-world scenario where multiple organizations—such as a hospital and a factory—collaborate without sharing raw network logs.
-
-This report presents the core architecture, algorithms, federated learning workflow, data engineering pipeline, experimental results, and the final implementation details used in the project.
+This report documents the complete system architecture, federated workflow, data engineering steps, machine learning model, and all verified implementation details.
 
 ---
+# **2. System Motivation**
 
-# 2. System Motivation
+Modern intrusion detection requires large, diverse datasets, but organizations are often unable or unwilling to share logs due to:
 
-Modern intrusion detection requires large, diverse datasets, but organizations cannot share raw logs due to:
-- Privacy regulations (GDPR, HIPAA)
-- Business confidentiality
-- Operational security risks
+- **Privacy Regulations:** (GDPR, HIPAA) restrict movement of sensitive logs.
+- **Business Confidentiality:** Internal activity patterns must remain private.
+- **Operational Security:** Raw logs may reveal infrastructure or vulnerabilities.
 
-Federated Learning enables **collaborative training without data sharing**, making it suitable for distributed defense systems.
+Federated Learning enables decentralized model training without transferring sensitive data.
 
-**Motivations:**
+### **Key Motivations**
 - Enable collaborative IDS training without compromising privacy.
-- Capture domain-specific attack patterns via **non-IID client datasets**.
+- Capture domain-specific attack patterns via **non-IID** datasets.
 - Improve model robustness across heterogeneous environments.
-- Evaluate FL performance under realistic distributed security constraints.
+- Evaluate FL performance under realistic distributed constraints.
 
 ---
+# **3. System Architecture Overview**
 
-# 3. System Architecture Overview
+FED_IIDS adopts a **client–server** architecture using the **Flower (flwr)** framework. All components—client, server, and shared—are fully decoupled.
 
-FED_IIDS uses a modular client–server architecture based on the **Flower (flwr)** FL framework.
-
-## 3.1 Server
+---
+## **3.1 Server (server/)**
 - Acts as the FL coordinator.
-- Initializes the global model.
-- Sends configuration (e.g., local epochs) to clients.
-- Aggregates updates using **FedAvg**.
-- Evaluates on `global_test_set.npz`.
+- Loads configuration from `server_config.py`.
+- Initializes the global model from `shared/model.py`.
+- Sends global weights and round configuration to clients.
+- Aggregates updates via **FedAvg**.
+- Evaluates performance on `server/data/global_test_set.npz`.
 
-## 3.2 FL Clients
+---
+## **3.2 FL Clients (client/)**
 Each client:
 - Represents an independent organization.
-- Loads its private `.npz` dataset.
-- Trains the model locally using **DP-SGD**.
-- Sends back **only model weight updates**, never data.
-
-## 3.3 Communication Protocol
-- Built on Flower’s **gRPC**-based orchestration.
-- Model weights exchanged as NumPy arrays.
-- Server-side config stored in `server_config.py`.
-- Default server bind address: `0.0.0.0:8080`.
-- Default client target address: `127.0.0.1:8080` for local testing.
+- Loads its own private dataset from `client/data/`.
+- Imports the model architecture from the `shared/` folder.
+- Trains locally using **DP-SGD**.
+- Sends back only model weight updates—**never raw data**.
 
 ---
+## **3.3 Shared API Contract (shared/)**
+Defines the model specification shared between all components:
+- `shared/model.py` → Model architecture
+- `shared/model_config.py` → `NUM_FEATURES = 30`
 
-# 4. Data Engineering Pipeline
+This contract ensures consistent architecture across all clients and the server.
 
-Data preparation was performed in the `Fed_IIDS.ipynb` preprocessing notebook.
+---
+# **4. Data Engineering Pipeline**
 
-## 4.1 Source Data
-- Derived from **IoT-DIAD** and similar datasets.
-- >1.6 million network flow samples.
-- 23 CSV files aggregated.
+The full preprocessing pipeline is implemented in the `Fed_IIDS.ipynb` notebook.
 
-## 4.2 Cleaning & Sanitization
-- Removed NaN and Inf values.
-- Removed identifier fields: `flow_id`, IP addresses, timestamps.
-- Applied **Min-Max Scaling (0 to 1)** to all numeric features.
+## **4.1 Source Data**
+- Based on the **IoT-DIAD** dataset
+- Contains **1.6 million** network flow records
+- Aggregates **23 CSV files**
 
-## 4.3 Feature Reduction
-A two-stage feature reduction pipeline:
-1. **Correlation filtering** removed highly redundant features.
-2. **LightGBM feature importance** selected the strongest predictors.
+## **4.2 Cleaning & Sanitization**
+- Removed samples with NaN or Inf values
+- Dropped non-predictive identifier fields (flow_id, IPs, timestamps)
+- Applied **Min-Max Scaling (0–1)** to all numeric features
 
-Result:
-- Feature count reduced from **74 → 30**.
+## **4.3 Feature Reduction**
+A two-stage feature selection pipeline:
+1. **Correlation Filtering** → Removes redundant features
+2. **LightGBM Feature Importance** → Selects top predictors
 
-## 4.4 Non-IID Partitioning (Final Implementation)
+Final feature count: **74 → 30**
+
+## **4.4 Non-IID Partitioning**
 Clients receive disjoint sets of attack categories:
 
-### Client 1 (Hospital)
+### **Client 1 (Hospital)**
 - Benign
 - Spoofing
 
-### Client 2 (Factory)
+### **Client 2 (Factory)**
 - Benign
 - DoS
 - DDoS
 - Mirai
 - Recon
 
-This **intentionally introduces heterogeneity**, enabling evaluation of catastrophic forgetting and cross-domain generalization.
+This heterogeneity enables realistic evaluation of catastrophic forgetting.
 
 ---
+# **5. Machine Learning Model**
 
-# 5. Machine Learning Model
+## **5.1 Architecture (Final)**
+Defined in `shared/model.py`.  
+A **binary classifier** for *Benign vs Attack*.
 
-## 5.1 Architecture (Final Implementation)
-A **binary classifier** (Benign vs Attack) defined in `client/model.py`.
+- Input: **30-dimensional** vector
+- Dense(64, activation='relu')
+- Dropout(0.2)
+- Dense(32, activation='relu')
+- Dropout(0.2)
+- Output: Dense(1, activation='sigmoid')
 
-- Input: 30 features
-- Hidden Layers: Dense(64) → Dense(32) → Dense(16), all ReLU
-- Dropout applied after hidden layers
-- Output: **Sigmoid neuron** (`0 = Benign`, `1 = Attack`)
+This section matches the final implemented model.
 
-## 5.2 Training Parameters
-- Optimizer: `DPKerasAdamOptimizer` (clients), `Adam` (server evaluation)
+## **5.2 Training Parameters**
+- Optimizer (clients): **DPKerasAdamOptimizer**
+- Optimizer (server evaluation): Adam
 - Loss: **BinaryCrossentropy**
-- Batch Size: **256** (required for DP microbatch divisibility)
-- Local Epochs: **2**
+- Batch size: **256** (fixed due to DP microbatch requirement)
+- Local epochs: **2**
 
-## 5.3 Differential Privacy (DP-SGD)
-DP-SGD ensures privacy via:
-- **Gradient clipping** (`l2_norm_clip`)
-- **Gaussian noise injection** (`noise_multiplier`)
+## **5.3 Differential Privacy (DP-SGD)**
+DP-SGD provides record-level privacy guarantees via:
+- **Gradient clipping** (l2_norm_clip)
+- **Gaussian noise injection** (noise_multiplier)
 
-A major bug was identified:
-- `DPOptimizerKeras` is incompatible with `validation_split`.
-- **Fix:** Use only `validation_data`.
+### Important Fix
+`DPOptimizerKeras` is incompatible with `validation_split`.
+- Solution: Use **validation_data** instead.
 
 ---
+# **6. Federated Learning Workflow**
 
-# 6. Federated Learning Workflow
+## **Round 0 — Baseline Evaluation**
+- Server initializes the global model
+- Evaluates on `global_test_set.npz`
 
-## Round 0 (Baseline Evaluation)
-- Server initializes global model.
-- Evaluates on global test set.
+## **Per-Round Workflow (Rounds 1…N)**
+1. **Send Configuration:**  
+   Server sends global weights + `{local_epochs: 2}`
 
-## Per-Round Procedure
-1. Server selects all clients.
-2. Server sends global weights and config to clients.
-3. Clients train locally using DP-SGD.
-4. Clients return updated weight deltas.
-5. Server aggregates using:
+2. **Local Training:**  
+   Clients train using DP-SGD on private data
+
+3. **Return Updates:**  
+   Clients return updated model weights
+
+4. **Aggregation (FedAvg):**
 ```
 GlobalWeights = Σ (n_k / N) * LocalWeights_k
 ```
-6. Server evaluates on:
-   - Global test set
-   - Client-side local test sets (weighted)
+
+5. **Evaluation:**  
+   - Clients evaluate updated model on local test sets  
+   - Server evaluates on global test set
+
+6. Repeat until `NUM_ROUNDS` is reached
 
 ---
+# **7. Implementation Details**
 
-# 7. Implementation Details
-
-## 7.1 Project Layout
+## **7.1 Final Project Structure**
 ```
 Fed_IIDS/
 │
-├── server.py               # Main server logic
-├── server_config.py        # Server-side runtime configuration
+├── client/
+│   ├── run_client.py
+│   ├── nids_client.py
+│   ├── config.py
+│   ├── data_loader.py
+│   ├── requirements.txt
+│   ├── check_config.py
+│   ├── standalone_test.py
+│   └── data/
+│       └── client_hospital_train.npz
+│       └── ...
 │
-└── client/
-    ├── run_client.py       # Client entry script
-    ├── nids_client.py      # Federated client (fit/evaluate)
-    ├── model.py            # Shared DNN model
-    ├── data_loader.py      # Loads and trims NPZ datasets
-    ├── config.py           # Client configuration (DP, FL)
-    ├── standalone_test.py  # Local DP training debug script
-    └── data/               # Partitioned non-IID datasets
+├── server/
+│   ├── server.py
+│   ├── server_config.py
+│   └── data/
+│       └── global_test_set.npz
+│
+├── shared/
+│   ├── model.py
+│   └── model_config.py
+│
+├── outputs/
+│   ├── server_terminal_output.txt
+│   └── client_terminal_output.txt
+│
+├── Fed_IIDS.ipynb
+├── README.md
+└── TECHNICAL_REPORT.md
 ```
 
-## 7.2 Network & Communication
-- Server listens on: `0.0.0.0:8080`
-- Clients connect to: `127.0.0.1:8080` or LAN IP
-- Flower handles all RPC/grpc communication
+## **7.2 Network & Communication**
+- Server listens on: **0.0.0.0:8080**
+- Clients connect to: **127.0.0.1:8080** (local testing)
+- Communication is via **Flower gRPC protocol**
+
+## **7.3 How to Run**
+Commands must be executed from the project root.
+
+### **Start Server:**
+```
+python -m server.server
+```
+
+### **Start Client 1:**
+```
+python -m client.run_client --client-id hospital
+```
+
+### **Start Client 2:**
+```
+python -m client.run_client --client-id factory
+```
 
 ---
-
-# 8. Evaluation Metrics
-
-Server tracks:
-- **Accuracy** (global)
+# **8. Evaluation Metrics**
+- **Accuracy**
 - **Binary Cross-Entropy Loss**
-- **F1-Score** (critical for class imbalance)
-- **Weighted client-side accuracy** (local evaluations)
+- **F1-Score** (important for imbalanced datasets)
+
+The server also logs weighted client-side accuracy.
 
 ---
+# **9. Experimental Observations**
 
-# 9. Experimental Observations
+## **9.1 Catastrophic Forgetting**
+Training on one non-IID client leads to severe forgetting of unseen attacks.
 
-### 9.1 Catastrophic Forgetting
-Training on a single non-IID client (e.g., only hospital data) causes collapse in global test performance (e.g., accuracy dropping from 0.75 → 0.26). The model forgets unseen attack categories.
+## **9.2 Federated Generalization**
+FedAvg merges client-specific knowledge into a generalized IDS.
 
-### 9.2 Federated Learning Benefit
-Using **both non-IID clients** resolves forgetting and produces a generalized model capable of detecting all attack categories.
-
-### 9.3 DP-SGD Operational Issues
-`tensorflow-privacy` introduces strict constraints:
-- No `validation_split`
-- Batch-size/divisibility rules
-
-Fixes were incorporated into the final implementation.
+## **9.3 DP-SGD Constraints**
+- Batch size must equal microbatch count
+- `validation_split` cannot be used
 
 ---
-
-# 10. Limitations
-- FedAvg struggles with extreme non-IID skew.
-- DP-SGD introduces accuracy and speed penalties.
-- Synchronous aggregation may not scale to very large numbers of clients.
-
----
-
-# 11. Future Work
-- Investigate **FedProx, FedAdam, FedNova** for better non-IID convergence.
-- Add secure aggregation (HE, TEEs, or masking).
-- Extend the model to temporal architectures (LSTM, GRU, Transformers).
-- Support more than two clients.
+# **10. Limitations**
+- FedAvg struggles with extreme non-IID skew
+- DP-SGD reduces accuracy slightly
+- Synchronous aggregation doesn't scale to thousands of clients
 
 ---
-
-# 12. Conclusion
-
-FED_IIDS demonstrates that a high-performance, privacy-preserving intrusion detection system can be collaboratively trained across organizations without exposing sensitive network logs. The system integrates federated learning, differential privacy, non-IID data simulation, and deep learning into a unified, deployable architecture.
-
-This technical report reflects the **final, verified implementation and results** of the project.
+# **11. Future Work**
+- Implement FedProx, FedAdam, FedNova
+- Add secure aggregation protocols
+- Extend to temporal models (LSTM/Transformer)
+- Support real-world multi-client deployment
 
 ---
+# **12. Conclusion**
+
+FED_IIDS demonstrates that a high-accuracy intrusion detection system can be collaboratively trained across organizations **without sharing raw data**, protected by Differential Privacy and supported by a realistic non-IID FL environment.
+
+This document serves as the final, verified technical report for the project.
+

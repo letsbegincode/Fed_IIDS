@@ -1,8 +1,4 @@
-PS E:\Fed_IIDS> & E:/Fed_IIDS/venv/Scripts/Activate.ps1
-(venv) PS E:\Fed_IIDS> python server.py
-PS E:\Fed_IIDS> & E:/Fed_IIDS/venv/Scripts/Activate.ps1
-PS E:\Fed_IIDS> & E:/Fed_IIDS/venv/Scripts/Activate.ps1
-(venv) PS E:\Fed_IIDS> python server.py
+(venv) PS E:\Fed_IIDS\server> python server.py
 WARNING:tensorflow:From E:\Fed_IIDS\venv\Lib\site-packages\keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
 
 
@@ -26,12 +22,33 @@ INFO :      Evaluating initial global parameters
 
 ==================== [Global Model Evaluation] ====================
 ROUND 0
-  Global Loss:     0.6978
-  Global Accuracy: 0.3182
-  Global F1-Score: 0.2414
+Waiting for 1 clients to connect...
+-----------------------------------------------------------------
+INFO :      Starting Flower server, config: num_rounds=2, no round_timeout
+INFO :      Flower ECE: gRPC server running (2 rounds), SSL is disabled
+INFO :      [INIT]
+INFO :      Requesting initial parameters from one random client
+INFO :      Received initial parameters from one random client
+INFO :      Evaluating initial global parameters
+
+==================== [Global Model Evaluation] ====================
+ROUND 0
+INFO :      [INIT]
+INFO :      Requesting initial parameters from one random client
+INFO :      Received initial parameters from one random client
+INFO :      Evaluating initial global parameters
+
+==================== [Global Model Evaluation] ====================
+ROUND 0
+
+==================== [Global Model Evaluation] ====================
+ROUND 0
+  Global Loss:     0.6705
+  Global Accuracy: 0.7516
+  Global F1-Score: 0.8578
 =================================================================
 
-INFO :      initial parameters (loss, other metrics): 0.6977840662002563, {'accuracy': 0.3181576728820801, 'f1_score': 0.24144852617685877} 
+INFO :      initial parameters (loss, other metrics): 0.6704660058021545, {'accuracy': 0.751554012298584, 'f1_score': 0.857804686560619}
 INFO :
 INFO :      [ROUND 1]
 
@@ -43,17 +60,17 @@ WARNING :   No fit_metrics_aggregation_fn provided
 
 ==================== [Global Model Evaluation] ====================
 ROUND 1
-  Global Loss:     2.3454
-  Global Accuracy: 0.2620
-  Global F1-Score: 0.0481
+  Global Loss:     2.4306
+  Global Accuracy: 0.2617
+  Global F1-Score: 0.0473
 =================================================================
 
-INFO :      fit progress: (1, 2.3454089164733887, {'accuracy': 0.2619594931602478, 'f1_score': 0.04810366674901776}, 287.45434060000116)    
+INFO :      fit progress: (1, 2.430579900741577, {'accuracy': 0.2616690695285797, 'f1_score': 0.0473115193264447}, 353.11728759999824)
 INFO :      configure_evaluate: strategy sampled 1 clients (out of 1)
 INFO :      aggregate_evaluate: received 1 results and 0 failures
 --- [Client-Side Evaluate Results] ---
 Received local evaluations from 1 clients.
-  Weighted Avg. *Client-Side* Accuracy: 0.7428
+  Weighted Avg. *Client-Side* Accuracy: 0.7423
 INFO :
 INFO :      [ROUND 2]
 
@@ -64,36 +81,36 @@ INFO :      aggregate_fit: received 1 results and 0 failures
 
 ==================== [Global Model Evaluation] ====================
 ROUND 2
-  Global Loss:     2.5485
-  Global Accuracy: 0.2782
-  Global F1-Score: 0.0897
+  Global Loss:     2.5082
+  Global Accuracy: 0.2784
+  Global F1-Score: 0.0898
 =================================================================
 
-INFO :      fit progress: (2, 2.548459529876709, {'accuracy': 0.2782226800918579, 'f1_score': 0.08971111959664285}, 571.2110238000023)      
+INFO :      fit progress: (2, 2.508174180984497, {'accuracy': 0.27836477756500244, 'f1_score': 0.08984070575766077}, 733.0734207999994)
 INFO :      configure_evaluate: strategy sampled 1 clients (out of 1)
 INFO :      aggregate_evaluate: received 1 results and 0 failures
 --- [Client-Side Evaluate Results] ---
 Received local evaluations from 1 clients.
-  Weighted Avg. *Client-Side* Accuracy: 0.7694
+  Weighted Avg. *Client-Side* Accuracy: 0.7691
 INFO :
 INFO :      [SUMMARY]
-INFO :      Run finished 2 round(s) in 576.26s
+INFO :      Run finished 2 round(s) in 747.21s
 INFO :          History (loss, distributed):
-INFO :                  round 1: 0.750802755355835
-INFO :                  round 2: 0.7432999014854431
+INFO :                  round 1: 0.7723961472511292
+INFO :                  round 2: 0.7429192066192627
 INFO :          History (loss, centralized):
-INFO :                  round 0: 0.6977840662002563
-INFO :                  round 1: 2.3454089164733887
-INFO :                  round 2: 2.548459529876709
+INFO :                  round 0: 0.6704660058021545
+INFO :                  round 1: 2.430579900741577
+INFO :                  round 2: 2.508174180984497
 INFO :          History (metrics, distributed, evaluate):
-INFO :          {'accuracy': [(1, 0.7427594661712646), (2, 0.7693614363670349)]}
+INFO :          {'accuracy': [(1, 0.7422508597373962), (2, 0.7690765857696533)]}
 INFO :          History (metrics, centralized):
-INFO :          {'accuracy': [(0, 0.3181576728820801),
-INFO :                        (1, 0.2619594931602478),
-INFO :                        (2, 0.2782226800918579)],
-INFO :           'f1_score': [(0, 0.24144852617685877),
-INFO :                        (1, 0.04810366674901776),
-INFO :                        (2, 0.08971111959664285)]}
+INFO :          {'accuracy': [(0, 0.751554012298584),
+INFO :                        (1, 0.2616690695285797),
+INFO :                        (2, 0.27836477756500244)],
+INFO :           'f1_score': [(0, 0.857804686560619),
+INFO :                        (1, 0.0473115193264447),
+INFO :                        (2, 0.08984070575766077)]}
 INFO :
 =================================================================
            FEDERATED LEARNING COMPLETE - SERVER SHUTDOWN
