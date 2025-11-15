@@ -12,7 +12,7 @@ FED_IIDS is a federated, privacy-preserving intrusion detection framework design
 
 The project demonstrates the complete lifecycle of a federated NIDS: non-IID data engineering, feature reduction through correlation and LightGBM ranking, deep neural network modeling, differentially private optimization, and secure federated aggregation using the Flower framework. FED_IIDS is designed as a research platform to study federated behavior under realistic conditions, including catastrophic forgetting, data skew challenges, and cross-domain generalization.
 
-The accompanying **TECHNICAL_REPORT.md** contains detailed architectural, algorithmic, and experimental documentation.
+The accompanying **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)** contains detailed architectural, algorithmic, and experimental documentation.
 
 ---
 
@@ -101,39 +101,39 @@ FED_IIDS follows a modular, multi-machine client–server design.
 flowchart TD
 
     subgraph SERVER["Server Machine (server.py)"]
-        S[Global Server\n(server.py)]
-        SC[server_config.py]
-        GTS[global_test_set.npz]
+        S["Global Server (server.py)"]
+        SC["server_config.py"]
+        GTS["global_test_set.npz"]
         S --> SC
-        S -->|Evaluation| GTS
+        S -->|"Evaluation"| GTS
     end
 
     subgraph CLIENT1["Client 1: Hospital"]
-        C1[run_client.py\n(Hospital)]
-        C1D[Hospital Dataset\n(hospital_train.npz)]
-        C1C[config.py]
+        C1["Hospital Client (run_client.py)"]
+        C1D["hospital_train.npz"]
+        C1C["config.py"]
         C1 --> C1C
-        C1 -->|Train with DP-SGD| C1D
+        C1 -->|"Train with DP-SGD"| C1D
     end
 
     subgraph CLIENT2["Client 2: Factory"]
-        C2[run_client.py\n(Factory)]
-        C2D[Factory Dataset\n(factory_train.npz)]
-        C2C[config.py]
+        C2["Factory Client (run_client.py)"]
+        C2D["factory_train.npz"]
+        C2C["config.py"]
         C2 --> C2C
-        C2 -->|Train with DP-SGD| C2D
+        C2 -->|"Train with DP-SGD"| C2D
     end
 
-    S -->|Send Model + Config| C1
-    S -->|Send Model + Config| C2
+    S -->|"Send Model + Config"| C1
+    S -->|"Send Model + Config"| C2
 
-    C1 -->|Return Private Update| S
-    C2 -->|Return Private Update| S
+    C1 -->|"Private Update"| S
+    C2 -->|"Private Update"| S
 
-    S -->|FedAvg Aggregation| S
+    S -->|"FedAvg Aggregation"| S
 ```
 
-A full breakdown of this architecture is provided in **TECHNICAL_REPORT.md**.
+A full breakdown of this architecture is provided in **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**.
 
 ---
 
@@ -223,8 +223,8 @@ Full experimental analysis is in **TECHNICAL_REPORT.md**.
 
 # **8. License**
 
-This project is licensed under the MIT License.
-See the `LICENSE` file for details.
+This project is licensed under the MIT License.  
+See the full license text here: **[LICENSE](./LICENSE)**.
 
 ---
 
@@ -249,7 +249,7 @@ If you use FED_IIDS in your research, please cite:
 
 The following document contains complete, in-depth details:
 
-### **TECHNICAL_REPORT.md**
+## **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**
 
 (Architecture, Data Pipeline, Model Details, FL Workflow, Evaluation Methodology, Results)
 
