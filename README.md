@@ -294,13 +294,8 @@ Full results are in **TECHNICAL_REPORT.md**.
 
 # **10. License**
 
-<<<<<<< HEAD
 This project is licensed under the MIT License.
 See: **[LICENSE](./LICENSE)**
-=======
-This project is licensed under the MIT License.  
-See the full license text here: **[LICENSE](./LICENSE)**.
->>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
 
@@ -319,12 +314,6 @@ GitHub Repository: https://github.com/letsbegincode/Fed_IIDS
 
 See the full technical paper:
 
-<<<<<<< HEAD
 **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**
-=======
-## **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**
-
-(Architecture, Data Pipeline, Model Details, FL Workflow, Evaluation Methodology, Results)
->>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
