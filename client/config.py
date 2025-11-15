@@ -3,7 +3,7 @@
 # ---------------------------------
 # This is the IP address and port of your "Server Person's" machine.
 # Ask them what this is.
-SERVER_ADDRESS = "127.0.0.1:8080" 
+SERVER_ADDRESS = "10.2.48.245:8080" 
 
 # ---------------------------------
 # 2. MODEL "API CONTRACT" CONFIG
