@@ -141,7 +141,6 @@ Fed_IIDS/
 ```mermaid
 flowchart TD
 
-<<<<<<< HEAD
     subgraph SERVER["Server (server/)"]
         S["server.py"]
         SC["server_config.py"]
@@ -152,7 +151,7 @@ flowchart TD
 
     subgraph CLIENT1["Client 1: Hospital (client/)"]
         C1["run_client.py"]
-        C1D["Hospital Data"]
+        C1D["hospital_train.npz"]
         C1C["config.py"]
         C1 --> C1C
         C1 -->|"DP-SGD Training"| C1D
@@ -160,55 +159,23 @@ flowchart TD
 
     subgraph CLIENT2["Client 2: Factory (client/)"]
         C2["run_client.py"]
-        C2D["Factory Data"]
-        C2C["config.py"]
-        C2 --> C2C
-        C2 -->|"DP-SGD Training"| C2D
-=======
-    subgraph SERVER["Server Machine (server.py)"]
-        S["Global Server (server.py)"]
-        SC["server_config.py"]
-        GTS["global_test_set.npz"]
-        S --> SC
-        S -->|"Evaluation"| GTS
-    end
-
-    subgraph CLIENT1["Client 1: Hospital"]
-        C1["Hospital Client (run_client.py)"]
-        C1D["hospital_train.npz"]
-        C1C["config.py"]
-        C1 --> C1C
-        C1 -->|"Train with DP-SGD"| C1D
-    end
-
-    subgraph CLIENT2["Client 2: Factory"]
-        C2["Factory Client (run_client.py)"]
         C2D["factory_train.npz"]
         C2C["config.py"]
         C2 --> C2C
-        C2 -->|"Train with DP-SGD"| C2D
->>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
+        C2 -->|"DP-SGD Training"| C2D
     end
 
     S -->|"Send Model + Config"| C1
     S -->|"Send Model + Config"| C2
 
-<<<<<<< HEAD
-    C1 -->|"Return Update"| S
-    C2 -->|"Return Update"| S
-=======
     C1 -->|"Private Update"| S
     C2 -->|"Private Update"| S
->>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
     S -->|"FedAvg Aggregation"| S
+
 ```
 
-<<<<<<< HEAD
 Full architectural details are available in **TECHNICAL_REPORT.md**.
-=======
-A full breakdown of this architecture is provided in **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**.
->>>>>>> 0e6ba5d196398e3217384701ffb1c04f86ebc746
 
 ---
 
