@@ -45,15 +45,21 @@ class NIDSClient(fl.client.NumPyClient):
 
         # 2. Get local training config from the server's message
         local_epochs = config_server.get("local_epochs", config.DEFAULT_LOCAL_EPOCHS)
-        batch_size = config_server.get("batch_size", config.DEFAULT_BATCH_SIZE)
-
+        
+        # *** THIS IS THE FIX ***
+        # For DP-SGD, the batch_size passed to model.fit() *must* be
+        # equal to the num_microbatches passed to the optimizer.
+        # We ignore the server-sent batch_size (which was 128) and
+        # force it to match the DP requirement (which is 256).
+        dp_batch_size = config.DP_MICROBATCHES
+        
         # 3. --- Path A: Apply Differential Privacy ---
         # We must create a *new* DP optimizer for each 'fit' call
         # to correctly track the privacy budget.
         optimizer = DPKerasAdamOptimizer(
             l2_norm_clip=config.DP_L2_NORM_CLIP,
             noise_multiplier=config.DP_NOISE_MULTIPLIER,
-            num_microbatches=config.DP_MICROBATCHES,
+            num_microbatches=dp_batch_size, # Use our new variable
             learning_rate=config.DP_LEARNING_RATE
         )
         
@@ -77,7 +83,7 @@ class NIDSClient(fl.client.NumPyClient):
             self.x_train,
             self.y_train,
             epochs=local_epochs,
-            batch_size=batch_size,
+            batch_size=dp_batch_size, # <-- Use dp_batch_size here
             validation_split=0.1,  # Use 10% of train data for validation
             verbose=2
         )
