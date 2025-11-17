@@ -12,7 +12,7 @@ This script:
 # --- 1. Silence TensorFlow Warnings ---
 # This must be at the top, before TensorFlow is imported
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Suppress INFO and WARNING
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Suppress INFO and WARNING messages (show only ERROR+)
 import tensorflow as tf
 import logging
 
@@ -21,6 +21,7 @@ import logging
 # `TF_CPP_MIN_LOG_LEVEL`).
 tf.get_logger().setLevel('ERROR')
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
+logging.getLogger('flwr').setLevel(logging.ERROR)
 try:
     # For TF1-style logging calls inside TF2, set compat verbosity as well.
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -36,7 +37,10 @@ warnings.filterwarnings("ignore", ".*The name tf.executing_eagerly_outside_funct
 warnings.filterwarnings("ignore", ".*The name tf.ragged.RaggedTensorValue is deprecated.*")
 import sys
 # Suppress TensorFlow Probability warning
-warnings.filterwarnings("ignore", ".*distutils Version classes are deprecated.*", category=DeprecationWarning)
+# Suppress TensorFlow Probability distutils deprecation
+warnings.filterwarnings("ignore", ".*distutils Version classes are deprecated.*", category=DeprecationWarning, module="tensorflow_probability.*")
+# As a fallback, ignore DeprecationWarning coming from installed packages
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Some TF internals emit deprecation warnings via the `warnings` module.
 warnings.filterwarnings("ignore", ".*sparse_softmax_cross_entropy.*")
 # --- End Warning Silence ---
@@ -114,7 +118,13 @@ def main():
                 )
                 break
             except grpc.RpcError as rpc_err:
-                print(f"[Connection] gRPC error on attempt {attempt}: {rpc_err}")
+                # Print concise gRPC error code and details only
+                try:
+                    code = rpc_err.code()
+                    details = rpc_err.details()
+                    print(f"[Connection] gRPC error on attempt {attempt}: {code} - {details}")
+                except Exception:
+                    print(f"[Connection] gRPC error on attempt {attempt}: {rpc_err}")
             except Exception as e:
                 print(f"[Connection] Error on attempt {attempt}: {e}")
 
@@ -126,7 +136,11 @@ def main():
             time.sleep(delay)
             delay = min(delay * 2, 60)
 
-    start_client_with_retries()
+    try:
+        start_client_with_retries()
+    except KeyboardInterrupt:
+        print("\n[Connection] Interrupted by user. Exiting client.")
+        sys.exit(0)
     print(f"\n[{client_id}] Client disconnected.")
     print("=================================================================")
 
