@@ -15,10 +15,10 @@ NUM_ROUNDS = 2
 
 # Number of clients to wait for before starting
 # This MUST match the number of clients you intend to run (e.g., hospital + factory = 2)
-MIN_CLIENTS = 1
+MIN_CLIENTS = 2
 
 
 # --- Client Task Config ---
 # Configuration to send to clients each round
 # (e.g., how many epochs to train locally)
-LOCAL_EPOCHS_PER_ROUND = 2
+LOCAL_EPOCHS_PER_ROUND = 7

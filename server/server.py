@@ -13,7 +13,7 @@ import tensorflow as tf
 tf.get_logger().setLevel('ERROR')
 import warnings
 warnings.filterwarnings("ignore", ".*The name tf.losses.sparse_softmax_cross_entropy is deprecated.*")
-warnings.filterwarnings("ignore", ".*The name tf.executing_e_agerly_outside_functions is deprecated.*")
+warnings.filterwarnings("ignore", ".*The name tf.executing_eagerly_outside_functions is deprecated.*")
 warnings.filterwarnings("ignore", ".*The name tf.ragged.RaggedTensorValue is deprecated.*")
 warnings.filterwarnings("ignore", ".*The name tf.engine.base_layer_utils is deprecated.*")
 # --- End Warning Silence ---
@@ -24,11 +24,11 @@ import sys
 from sklearn.metrics import f1_score
 from typing import Dict, List, Tuple
 
-# --- Path Modification to Import 'shared' ---
+# --- [CRITICAL] Path Modification ---
+# Get the directory of the current script (E:\Fed_IIDS\server)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Get the parent directory (E:\Fed_IIDS)
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-
-
 # Add the root directory to the Python path to allow 'shared' import
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
@@ -48,7 +48,6 @@ def load_global_test_set():
     global X_test_global, y_test_global
     
     print("  > Loading global test set...", end="", flush=True)
-    # --- [NEW] Path is now local to the server ---
     test_file = os.path.join(SCRIPT_DIR, "data", "global_test_set.npz")
     
     if not os.path.exists(test_file):
@@ -106,6 +105,7 @@ def get_server_evaluation_fn():
         
         return loss, {"accuracy": accuracy, "f1_score": f1}
 
+    # This was the fix for your 'TypeError'
     return evaluate
 
 # --- 5. Client Configuration Function ---
@@ -163,8 +163,12 @@ def main():
         
         evaluate_fn=get_server_evaluation_fn(), 
         on_fit_config_fn=fit_config,            
-        evaluate_metrics_aggregation_fn=aggregate_evaluate_metrics, 
+        evaluate_metrics_aggregation_fn=aggregate_evaluate_metrics,
+
+        fit_timeout=7200,
+        accept_failures=False  # <-- strictly require all clients
     )
+
     print("  > Strategy configured.")
 
     print("\n-----------------------------------------------------------------")
