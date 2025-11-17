@@ -136,7 +136,7 @@ Fed_IIDS/
 
 ---
 
-## **4.2 Architecture Diagram (Mermaid Compatible)**
+## **4.2 Architecture Diagram**
 
 ```mermaid
 flowchart TD
@@ -175,7 +175,7 @@ flowchart TD
 
 ```
 
-Full architectural details are available in **TECHNICAL_REPORT.md**.
+Full architectural details are available in **[TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)**.
 
 ---
 
