@@ -43,6 +43,8 @@ warnings.filterwarnings("ignore", ".*sparse_softmax_cross_entropy.*")
 
 import argparse
 import flwr as fl
+import time
+import grpc
 # If this script is executed from inside the `client/` directory (making
 # `client` not importable as a top-level package), add the project root to
 # `sys.path` so absolute imports like `from client import ...` still work.
@@ -94,15 +96,37 @@ def main():
         y_test=y_test
     )
 
+    
     # 4. Start the Flower client
     print(f"  > Connecting to server at {config.SERVER_ADDRESS}...")
-    fl.client.start_client(
-        server_address=config.SERVER_ADDRESS,
-        # --- THIS IS THE FIX ---
-        # We wrap 'client' in 'client.to_client()'
-        # to silence the Flower Deprecation Warning.
-        client=client.to_client()
-    )
+
+    # Retry loop with exponential backoff to handle transient connection
+    # timeouts/drops (firewalls, load balancers, etc.).
+    def start_client_with_retries(max_retries=None):
+        attempt = 0
+        delay = 5
+        while True:
+            attempt += 1
+            try:
+                fl.client.start_client(
+                    server_address=config.SERVER_ADDRESS,
+                    client=client.to_client(),
+                )
+                break
+            except grpc.RpcError as rpc_err:
+                print(f"[Connection] gRPC error on attempt {attempt}: {rpc_err}")
+            except Exception as e:
+                print(f"[Connection] Error on attempt {attempt}: {e}")
+
+            if (max_retries is not None) and (attempt >= max_retries):
+                print(f"[Connection] Reached max retries ({max_retries}). Aborting.")
+                raise
+
+            print(f"[Connection] Retry in {delay} seconds...")
+            time.sleep(delay)
+            delay = min(delay * 2, 60)
+
+    start_client_with_retries()
     print(f"\n[{client_id}] Client disconnected.")
     print("=================================================================")
 
