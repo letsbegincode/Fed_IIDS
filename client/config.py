@@ -10,7 +10,7 @@ from shared.model_config import NUM_FEATURES
 
 # --- 2. Network Configuration ---
 # This is the IP address of the server.
-SERVER_ADDRESS = "10.2.48.245:8080" # Use "127.0.0.1" for local testing
+SERVER_ADDRESS = "127.0.0.1:8080" # Use "127.0.0.1" for local testing
 
 # --- 3. Differential Privacy Config ---
 DP_L2_NORM_CLIP = 1.0

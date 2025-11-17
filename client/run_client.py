@@ -43,6 +43,8 @@ warnings.filterwarnings("ignore", ".*distutils Version classes are deprecated.*"
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Some TF internals emit deprecation warnings via the `warnings` module.
 warnings.filterwarnings("ignore", ".*sparse_softmax_cross_entropy.*")
+# Suppress Flower deprecation warning about start_client()
+warnings.filterwarnings("ignore", ".*flwr.client.start_client.*is deprecated.*")
 # --- End Warning Silence ---
 
 import argparse

@@ -165,8 +165,7 @@ def main():
         on_fit_config_fn=fit_config,            
         evaluate_metrics_aggregation_fn=aggregate_evaluate_metrics,
 
-        fit_timeout=7200,
-        accept_failures=False  # <-- strictly require all clients
+        accept_failures=False
     )
 
     print("  > Strategy configured.")
@@ -177,8 +176,8 @@ def main():
     print("-----------------------------------------------------------------")
 
     fl.server.start_server(
-        server_address=sc.SERVER_ADDRESS, # From server_config.py
-        config=fl.server.ServerConfig(num_rounds=sc.NUM_ROUNDS), # From server_config.py
+        server_address=sc.SERVER_ADDRESS,
+        config=fl.server.ServerConfig(num_rounds=sc.NUM_ROUNDS, round_timeout=sc.FIT_TIMEOUT),
         strategy=strategy
     )
     
