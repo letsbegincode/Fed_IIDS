@@ -19,11 +19,6 @@ import sys
 import logging
 
 # --- Setup Paths ---
-# If this script is executed directly from inside `client/` (so the `client`
-# package is not on `sys.path`), add the project root so absolute imports
-# (`from client import ...`) work. This mirrors the approach used in
-# `run_client.py` and lets users run either from project root or inside
-# the `client/` folder.
 if __package__ is None:
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if project_root not in sys.path:
@@ -46,7 +41,7 @@ DP_BATCH_SIZE = 256
 DP_L2_NORM_CLIP = 1.0
 DP_NOISE_MULTIPLIER = 0.5
 DP_LEARNING_RATE = 0.001
-LOCAL_EPOCHS = 2 # We use the same number of epochs as one FL round
+LOCAL_EPOCHS = 10 # We use the same number of epochs as one FL round
 
 print("\n--- Hard-coded Configuration ---")
 print(f"  NUM_FEATURES = {NUM_FEATURES}")

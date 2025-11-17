@@ -2,3 +2,6 @@ temp.txt
 venv/
 __pycache__/
 *.pyc
+
+temp_client.txt
+temp_hospital.txt
